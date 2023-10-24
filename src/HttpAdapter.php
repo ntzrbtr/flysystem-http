@@ -14,12 +14,28 @@ use League\Flysystem\FilesystemOperationFailed;
 class HttpAdapter implements \League\Flysystem\FilesystemAdapter
 {
     /**
+     * HTTP client
+     *
+     * @var \Psr\Http\Client\ClientInterface
+     */
+    protected \Psr\Http\Client\ClientInterface $client;
+
+    /**
      * HttpAdapter constructor.
      *
      * @param string $base
+     * @param \Psr\Http\Client\ClientInterface|null $client
      */
-    public function __construct(protected string $base)
+    public function __construct(protected string $base, \Psr\Http\Client\ClientInterface $client = null)
     {
+        $url = filter_var($base, FILTER_VALIDATE_URL);
+        if ($url === false) {
+            throw new \InvalidArgumentException('Invalid base url');
+        }
+
+        $this->client = $client ?? new \GuzzleHttp\Client([
+            'base_uri' => $url,
+        ]);
     }
 
     /**
@@ -27,7 +43,14 @@ class HttpAdapter implements \League\Flysystem\FilesystemAdapter
      */
     public function fileExists(string $path): bool
     {
-        // TODO: Implement fileExists() method.
+        try {
+            $request = new \GuzzleHttp\Psr7\Request('HEAD', $path);
+            $this->client->sendRequest($request);
+
+            return true;
+        } catch (\Psr\Http\Client\ClientExceptionInterface $e) {
+            throw new \League\Flysystem\UnableToCheckFileExistence($e->getMessage(), $e->getCode(), $e);
+        }
     }
 
     /**
@@ -107,7 +130,7 @@ class HttpAdapter implements \League\Flysystem\FilesystemAdapter
      */
     public function visibility(string $path): FileAttributes
     {
-        // TODO: Implement visibility() method.
+        return $this->getMetadata($path);
     }
 
     /**
@@ -115,7 +138,7 @@ class HttpAdapter implements \League\Flysystem\FilesystemAdapter
      */
     public function mimeType(string $path): FileAttributes
     {
-        // TODO: Implement mimeType() method.
+        return $this->getMetadata($path);
     }
 
     /**
@@ -123,7 +146,7 @@ class HttpAdapter implements \League\Flysystem\FilesystemAdapter
      */
     public function lastModified(string $path): FileAttributes
     {
-        // TODO: Implement lastModified() method.
+        return $this->getMetadata($path);
     }
 
     /**
@@ -131,7 +154,7 @@ class HttpAdapter implements \League\Flysystem\FilesystemAdapter
      */
     public function fileSize(string $path): FileAttributes
     {
-        // TODO: Implement fileSize() method.
+        return $this->getMetadata($path);
     }
 
     /**
@@ -166,7 +189,21 @@ class HttpAdapter implements \League\Flysystem\FilesystemAdapter
      */
     protected function getMetadata(string $path): FileAttributes
     {
-        // TODO: Implement getMetadata() method.
+        try {
+            $request = new \GuzzleHttp\Psr7\Request('HEAD', $path);
+            $response = $this->client->sendRequest($request);
+            $headers = $response->getHeaders();
+
+            return new FileAttributes(
+                $path,
+                (int)$headers['Content-Length'][0],
+                \League\Flysystem\Visibility::PUBLIC,
+                (int)$headers['Last-Modified'][0],
+                $headers['Content-Type'][0]
+            );
+        } catch (\Psr\Http\Client\ClientExceptionInterface $e) {
+            throw new \League\Flysystem\UnableToRetrieveMetadata($e->getMessage(), $e->getCode(), $e);
+        }
     }
 
 }

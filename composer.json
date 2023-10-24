@@ -3,7 +3,8 @@
     "description": "Flysystem adapter for HTTP (read-only)",
     "type": "library",
     "require": {
-        "league/flysystem": "^3.18"
+        "league/flysystem": "^3.18",
+        "guzzlehttp/guzzle": "^7.8"
     },
     "require-dev": {
         "league/flysystem-adapter-test-utilities": "^3.16"

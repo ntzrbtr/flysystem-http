@@ -1,0 +1,23 @@
+{
+    "name": "ntzrbtr/flysystem-http",
+    "description": "Flysystem adapter for HTTP (read-only)",
+    "type": "library",
+    "require": {
+        "league/flysystem": "^3.18"
+    },
+    "require-dev": {
+        "league/flysystem-adapter-test-utilities": "^3.16"
+    },
+    "license": "MIT",
+    "autoload": {
+        "psr-4": {
+            "Netzarbeiter\\FlysystemHttp\\": "src/"
+        }
+    },
+    "authors": [
+        {
+            "name": "Thomas Off",
+            "email": "thomas.off@netzarbeiter.info"
+        }
+    ]
+}

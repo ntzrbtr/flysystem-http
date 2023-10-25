@@ -7,6 +7,8 @@ namespace Netzarbeiter\FlysystemHttp;
 use League\Flysystem\Config;
 use League\Flysystem\FileAttributes;
 use League\Flysystem\FilesystemOperationFailed;
+use League\Flysystem\UnableToReadFile;
+use Psr\Http\Message\StreamInterface;
 
 /**
  * Flysystem adapter for HTTP(S) urls
@@ -83,7 +85,7 @@ class HttpAdapter implements \League\Flysystem\FilesystemAdapter
      */
     public function read(string $path): string
     {
-        // TODO: Implement read() method.
+        return $this->readFile($path)->getContents();
     }
 
     /**
@@ -91,7 +93,7 @@ class HttpAdapter implements \League\Flysystem\FilesystemAdapter
      */
     public function readStream(string $path)
     {
-        // TODO: Implement readStream() method.
+        return $this->readFile($path)->detach();
     }
 
     /**
@@ -131,7 +133,7 @@ class HttpAdapter implements \League\Flysystem\FilesystemAdapter
      */
     public function visibility(string $path): FileAttributes
     {
-        return $this->getMetadata($path);
+        return $this->readMetadata($path);
     }
 
     /**
@@ -139,7 +141,7 @@ class HttpAdapter implements \League\Flysystem\FilesystemAdapter
      */
     public function mimeType(string $path): FileAttributes
     {
-        return $this->getMetadata($path);
+        return $this->readMetadata($path);
     }
 
     /**
@@ -147,7 +149,7 @@ class HttpAdapter implements \League\Flysystem\FilesystemAdapter
      */
     public function lastModified(string $path): FileAttributes
     {
-        return $this->getMetadata($path);
+        return $this->readMetadata($path);
     }
 
     /**
@@ -155,7 +157,7 @@ class HttpAdapter implements \League\Flysystem\FilesystemAdapter
      */
     public function fileSize(string $path): FileAttributes
     {
-        return $this->getMetadata($path);
+        return $this->readMetadata($path);
     }
 
     /**
@@ -183,12 +185,34 @@ class HttpAdapter implements \League\Flysystem\FilesystemAdapter
     }
 
     /**
+     * Read file.
+     *
+     * @param string $path
+     * @return StreamInterface
+     */
+    protected function readFile(string $path): StreamInterface
+    {
+        try {
+            $request = new \GuzzleHttp\Psr7\Request('GET', $path);
+            $response = $this->client->sendRequest($request);
+
+            if (!str_starts_with((string)$response->getStatusCode(), '2')) {
+                throw new UnableToReadFile('File not found');
+            }
+
+            return $response->getBody();
+        } catch (\Throwable $t) {
+            throw new UnableToReadFile($t->getMessage(), $t->getCode(), $t);
+        }
+    }
+
+    /**
      * Get metadata.
      *
      * @param string $path
      * @return FileAttributes
      */
-    protected function getMetadata(string $path): FileAttributes
+    protected function readMetadata(string $path): FileAttributes
     {
         try {
             $request = new \GuzzleHttp\Psr7\Request('HEAD', $path);
@@ -199,9 +223,23 @@ class HttpAdapter implements \League\Flysystem\FilesystemAdapter
             }
 
             $headers = $response->getHeaders();
-            $contentLength = (int)($headers['Content-Length'][0] ?? 0);
-            [$mimeType,] = explode(';', $headers['Content-type'][0] ?? '');
-            $lastModified = strtotime($headers['Last-Modified'][0] ?? '');
+
+            $contentLength = $headers['Content-Length'][0] ?? null;
+            if (is_numeric($contentLength)) {
+                $contentLength = (int)$contentLength;
+            }
+
+            $mimeType = $headers['Content-type'][0] ?? null;
+            if (is_string($mimeType)) {
+                [$mimeType,] = explode(';', $headers['Content-type'][0] ?? '');
+            }
+
+            $lastModified = $headers['Last-Modified'][0] ?? null;
+            $lastModified = match(true) {
+                is_string($lastModified) => strtotime($lastModified),
+                is_numeric($lastModified) => (int)$lastModified,
+                default => null,
+            };
 
             return new FileAttributes(
                 $path,

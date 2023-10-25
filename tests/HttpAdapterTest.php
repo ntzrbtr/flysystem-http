@@ -6,6 +6,7 @@ namespace Netzarbeiter\FlysystemHttp\Tests;
 
 use League\Flysystem\Config;
 use League\Flysystem\FileAttributes;
+use League\Flysystem\UnableToReadFile;
 use League\Flysystem\UnableToRetrieveMetadata;
 use League\Flysystem\Visibility;
 use Netzarbeiter\FlysystemHttp\FileOnlyFilesystem;
@@ -114,7 +115,16 @@ class HttpAdapterTest extends \PHPUnit\Framework\TestCase
      */
     public function testRead(): void
     {
-        // @todo Implement test
+        $this->assertEquals(self::CONTENT, $this->adapter->read('/file.txt'));
+    }
+
+    /**
+     * Test FilesystemAdapter::read() for missing file
+     */
+    public function testReadMissing(): void
+    {
+        $this->expectException(UnableToReadFile::class);
+        $this->assertEquals(self::CONTENT, $this->adapter->read('/missing.txt'));
     }
 
     /**
@@ -122,7 +132,19 @@ class HttpAdapterTest extends \PHPUnit\Framework\TestCase
      */
     public function testReadStream(): void
     {
-        // @todo Implement test
+        $stream = $this->adapter->readStream('/file.txt');
+        $this->assertIsResource($stream);
+        $this->assertEquals(self::CONTENT, stream_get_contents($stream));
+        fclose($stream);
+    }
+
+    /**
+     * Test FilesystemAdapter::readStream() for missing file
+     */
+    public function testReadStreamMissing(): void
+    {
+        $this->expectException(UnableToReadFile::class);
+        $this->assertEquals(self::CONTENT, $this->adapter->readStream('/missing.txt'));
     }
 
     /**

@@ -7,7 +7,7 @@ namespace Netzarbeiter\FlysystemHttp\Tests;
 /**
  * Test for the HTTP adapter using PSR-7 using a predefined client
  */
-class HttpAdapterPsrFromClientTest extends \Netzarbeiter\FlysystemHttp\Tests\HttpAdapterTest
+class HttpAdapterPsrFromClientTest extends HttpAdapterTest
 {
     /**
      * @inheritDoc

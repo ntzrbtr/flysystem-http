@@ -6,7 +6,9 @@
 >
     <testsuites>
         <testsuite name="Integration">
-            <directory>tests</directory>
+            <file>tests/HttpAdapterStreamTest.php</file>
+            <file>tests/HttpAdapterPsrFromUrlTest.php</file>
+            <file>tests/HttpAdapterPsrFromClientTest.php</file>
         </testsuite>
     </testsuites>
     <source>

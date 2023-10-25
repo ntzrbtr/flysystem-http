@@ -5,15 +5,15 @@ declare(strict_types=1);
 namespace Netzarbeiter\FlysystemHttp\Tests;
 
 /**
- * Test for the HTTP adapter using PSR-7 using a url
+ * Test for the HTTP adapter using PHP streams
  */
-class HttpAdapterPsrFromUrlTest extends HttpAdapterTest
+class HttpAdapterStreamTest extends HttpAdapterTest
 {
     /**
      * @inheritDoc
      */
     protected function createAdapter(): \League\Flysystem\FilesystemAdapter
     {
-        return \Netzarbeiter\FlysystemHttp\HttpAdapterPsr::fromUrl($this->server->getServerRoot());
+        return new \Netzarbeiter\FlysystemHttp\HttpAdapterStream($this->server->getServerRoot());
     }
 }

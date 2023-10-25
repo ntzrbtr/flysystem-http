@@ -112,35 +112,17 @@ class HttpAdapterPsr extends HttpAdapter
                 throw new \League\Flysystem\UnableToRetrieveMetadata('File not found');
             }
 
-            $headers = $response->getHeaders();
-
-            $contentLength = $headers['Content-Length'][0] ?? null;
-            if (is_numeric($contentLength)) {
-                $contentLength = (int)$contentLength;
-            }
-
-            $mimeType = $headers['Content-type'][0] ?? null;
-            if (is_string($mimeType)) {
-                [$mimeType,] = explode(';', $headers['Content-type'][0] ?? '');
-            }
-
-            $lastModified = $headers['Last-Modified'][0] ?? null;
-            $lastModified = match(true) {
-                is_string($lastModified) => strtotime($lastModified),
-                is_numeric($lastModified) => (int)$lastModified,
-                default => null,
-            };
+            $headers = array_change_key_case($response->getHeaders());
 
             return new FileAttributes(
                 $path,
-                $contentLength,
+                $this->parseFileSize($headers['content-length'][0] ?? null),
                 \League\Flysystem\Visibility::PUBLIC,
-                $lastModified,
-                $mimeType
+                $this->parseLastModified($headers['last-modified'][0] ?? null),
+                $this->parseMimeType($headers['content-type'][0] ?? null)
             );
         } catch (\Throwable $t) {
             throw new \League\Flysystem\UnableToRetrieveMetadata($t->getMessage(), $t->getCode(), $t);
         }
     }
-
 }

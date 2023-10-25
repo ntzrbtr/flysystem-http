@@ -3,16 +3,24 @@
     "description": "Flysystem adapter for HTTP (read-only)",
     "type": "library",
     "require": {
+        "php": "^8.0",
         "league/flysystem": "^3.18",
         "guzzlehttp/guzzle": "^7.8"
     },
     "require-dev": {
-        "league/flysystem-adapter-test-utilities": "^3.16"
+        "league/flysystem-adapter-test-utilities": "^3.16",
+        "donatj/mock-webserver": "^2.7",
+        "phpunit/phpunit": "^10.4"
     },
     "license": "MIT",
     "autoload": {
         "psr-4": {
             "Netzarbeiter\\FlysystemHttp\\": "src/"
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "Netzarbeiter\\FlysystemHttp\\Tests\\": "tests/"
         }
     },
     "authors": [

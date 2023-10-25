@@ -35,6 +35,7 @@ class HttpAdapter implements \League\Flysystem\FilesystemAdapter
 
         $this->client = $client ?? new \GuzzleHttp\Client([
             'base_uri' => $url,
+            'follow_redirects' => true,
         ]);
     }
 
@@ -45,11 +46,11 @@ class HttpAdapter implements \League\Flysystem\FilesystemAdapter
     {
         try {
             $request = new \GuzzleHttp\Psr7\Request('HEAD', $path);
-            $this->client->sendRequest($request);
+            $response = $this->client->sendRequest($request);
 
-            return true;
-        } catch (\Psr\Http\Client\ClientExceptionInterface $e) {
-            throw new \League\Flysystem\UnableToCheckFileExistence($e->getMessage(), $e->getCode(), $e);
+            return str_starts_with((string)$response->getStatusCode(), '2');
+        } catch (\Throwable $t) {
+            return false;
         }
     }
 
@@ -192,17 +193,25 @@ class HttpAdapter implements \League\Flysystem\FilesystemAdapter
         try {
             $request = new \GuzzleHttp\Psr7\Request('HEAD', $path);
             $response = $this->client->sendRequest($request);
+
+            if (!str_starts_with((string)$response->getStatusCode(), '2')) {
+                throw new \League\Flysystem\UnableToRetrieveMetadata('File not found');
+            }
+
             $headers = $response->getHeaders();
+            $contentLength = (int)($headers['Content-Length'][0] ?? 0);
+            [$mimeType,] = explode(';', $headers['Content-type'][0] ?? '');
+            $lastModified = strtotime($headers['Last-Modified'][0] ?? '');
 
             return new FileAttributes(
                 $path,
-                (int)$headers['Content-Length'][0],
+                $contentLength,
                 \League\Flysystem\Visibility::PUBLIC,
-                (int)$headers['Last-Modified'][0],
-                $headers['Content-Type'][0]
+                $lastModified,
+                $mimeType
             );
-        } catch (\Psr\Http\Client\ClientExceptionInterface $e) {
-            throw new \League\Flysystem\UnableToRetrieveMetadata($e->getMessage(), $e->getCode(), $e);
+        } catch (\Throwable $t) {
+            throw new \League\Flysystem\UnableToRetrieveMetadata($t->getMessage(), $t->getCode(), $t);
         }
     }
 

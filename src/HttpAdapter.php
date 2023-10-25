@@ -7,55 +7,12 @@ namespace Netzarbeiter\FlysystemHttp;
 use League\Flysystem\Config;
 use League\Flysystem\FileAttributes;
 use League\Flysystem\FilesystemOperationFailed;
-use League\Flysystem\UnableToReadFile;
-use Psr\Http\Message\StreamInterface;
 
 /**
  * Flysystem adapter for HTTP(S) urls
  */
-class HttpAdapter implements \League\Flysystem\FilesystemAdapter
+abstract class HttpAdapter implements \League\Flysystem\FilesystemAdapter
 {
-    /**
-     * HTTP client
-     *
-     * @var \Psr\Http\Client\ClientInterface
-     */
-    protected \Psr\Http\Client\ClientInterface $client;
-
-    /**
-     * HttpAdapter constructor.
-     *
-     * @param string $base
-     * @param \Psr\Http\Client\ClientInterface|null $client
-     */
-    public function __construct(protected string $base, \Psr\Http\Client\ClientInterface $client = null)
-    {
-        $url = filter_var($base, FILTER_VALIDATE_URL);
-        if ($url === false) {
-            throw new \InvalidArgumentException('Invalid base url');
-        }
-
-        $this->client = $client ?? new \GuzzleHttp\Client([
-            'base_uri' => $url,
-            'follow_redirects' => true,
-        ]);
-    }
-
-    /**
-     * @inheritDoc
-     */
-    public function fileExists(string $path): bool
-    {
-        try {
-            $request = new \GuzzleHttp\Psr7\Request('HEAD', $path);
-            $response = $this->client->sendRequest($request);
-
-            return str_starts_with((string)$response->getStatusCode(), '2');
-        } catch (\Throwable $t) {
-            return false;
-        }
-    }
-
     /**
      * @inheritDoc
      */
@@ -78,22 +35,6 @@ class HttpAdapter implements \League\Flysystem\FilesystemAdapter
     public function writeStream(string $path, $contents, Config $config): void
     {
         throw new ReadOnlyFilesystem(FilesystemOperationFailed::OPERATION_WRITE);
-    }
-
-    /**
-     * @inheritDoc
-     */
-    public function read(string $path): string
-    {
-        return $this->readFile($path)->getContents();
-    }
-
-    /**
-     * @inheritDoc
-     */
-    public function readStream(string $path)
-    {
-        return $this->readFile($path)->detach();
     }
 
     /**
@@ -185,72 +126,10 @@ class HttpAdapter implements \League\Flysystem\FilesystemAdapter
     }
 
     /**
-     * Read file.
-     *
-     * @param string $path
-     * @return StreamInterface
-     */
-    protected function readFile(string $path): StreamInterface
-    {
-        try {
-            $request = new \GuzzleHttp\Psr7\Request('GET', $path);
-            $response = $this->client->sendRequest($request);
-
-            if (!str_starts_with((string)$response->getStatusCode(), '2')) {
-                throw new UnableToReadFile('File not found');
-            }
-
-            return $response->getBody();
-        } catch (\Throwable $t) {
-            throw new UnableToReadFile($t->getMessage(), $t->getCode(), $t);
-        }
-    }
-
-    /**
      * Get metadata.
      *
      * @param string $path
      * @return FileAttributes
      */
-    protected function readMetadata(string $path): FileAttributes
-    {
-        try {
-            $request = new \GuzzleHttp\Psr7\Request('HEAD', $path);
-            $response = $this->client->sendRequest($request);
-
-            if (!str_starts_with((string)$response->getStatusCode(), '2')) {
-                throw new \League\Flysystem\UnableToRetrieveMetadata('File not found');
-            }
-
-            $headers = $response->getHeaders();
-
-            $contentLength = $headers['Content-Length'][0] ?? null;
-            if (is_numeric($contentLength)) {
-                $contentLength = (int)$contentLength;
-            }
-
-            $mimeType = $headers['Content-type'][0] ?? null;
-            if (is_string($mimeType)) {
-                [$mimeType,] = explode(';', $headers['Content-type'][0] ?? '');
-            }
-
-            $lastModified = $headers['Last-Modified'][0] ?? null;
-            $lastModified = match(true) {
-                is_string($lastModified) => strtotime($lastModified),
-                is_numeric($lastModified) => (int)$lastModified,
-                default => null,
-            };
-
-            return new FileAttributes(
-                $path,
-                $contentLength,
-                \League\Flysystem\Visibility::PUBLIC,
-                $lastModified,
-                $mimeType
-            );
-        } catch (\Throwable $t) {
-            throw new \League\Flysystem\UnableToRetrieveMetadata($t->getMessage(), $t->getCode(), $t);
-        }
-    }
-
+    abstract protected function readMetadata(string $path): FileAttributes;
 }

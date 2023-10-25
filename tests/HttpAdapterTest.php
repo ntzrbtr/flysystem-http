@@ -15,7 +15,7 @@ use Netzarbeiter\FlysystemHttp\ReadOnlyFilesystem;
 /**
  * Test for the HTTP adapter
  */
-class HttpAdapterTest extends \PHPUnit\Framework\TestCase
+abstract class HttpAdapterTest extends \PHPUnit\Framework\TestCase
 {
     protected const MIME_TYPE = 'text/plain';
     protected const CONTENT_LENGTH = 12;
@@ -37,6 +37,13 @@ class HttpAdapterTest extends \PHPUnit\Framework\TestCase
     protected \League\Flysystem\FilesystemAdapter $adapter;
 
     /**
+     * Create the adapter to test.
+     *
+     * @return \League\Flysystem\FilesystemAdapter
+     */
+    abstract protected function createAdapter(): \League\Flysystem\FilesystemAdapter;
+
+    /**
      * @inheritDoc
      */
     protected function setUp(): void
@@ -56,7 +63,7 @@ class HttpAdapterTest extends \PHPUnit\Framework\TestCase
         );
         $this->server->start();
 
-        $this->adapter = new \Netzarbeiter\FlysystemHttp\HttpAdapter($this->server->getServerRoot());
+        $this->adapter = $this->createAdapter();
     }
 
     /**

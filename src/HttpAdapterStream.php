@@ -36,10 +36,13 @@ class HttpAdapterStream extends HttpAdapter
      */
     public function __construct(string $url, array $context = [])
     {
+        // Check if we have a valid url.
         $url = filter_var($url, FILTER_VALIDATE_URL);
         if ($url === false) {
             throw new \InvalidArgumentException('Invalid base url');
         }
+
+        // Remove trainling slash (will be added in buildUrl()).
         $this->url = rtrim($url, '/');
 
         // Add in some safe defaults for SSL/TLS.

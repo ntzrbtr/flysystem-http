@@ -26,21 +26,29 @@ class HttpAdapterPsr extends HttpAdapter
      * Create adapter from url.
      *
      * @param string $url
+     * @param array $options
      * @return self
      */
-    public static function fromUrl(string $url): self
+    public static function fromUrl(string $url, array $options = []): self
     {
+        // Check if we have a valid url.
         $url = filter_var($url, FILTER_VALIDATE_URL);
         if ($url === false) {
             throw new \InvalidArgumentException('Invalid base url');
         }
 
-        $client = new \GuzzleHttp\Client([
+        // Make sure we have a trailing slash (see https://docs.guzzlephp.org/en/stable/quickstart.html#creating-a-client).
+        if (parse_url($url, PHP_URL_PATH) !== null) {
+            $url = rtrim($url, '/') . '/';
+        }
+
+        // Compose options.
+        $options += [
             'base_uri' => $url,
             'follow_redirects' => true,
-        ]);
+        ];
 
-        return new static($client);
+        return new static(new \GuzzleHttp\Client($options));
     }
 
     /**
@@ -49,10 +57,9 @@ class HttpAdapterPsr extends HttpAdapter
     public function fileExists(string $path): bool
     {
         try {
-            $request = new \GuzzleHttp\Psr7\Request('HEAD', $path);
-            $response = $this->client->sendRequest($request);
+            $this->head($path);
 
-            return \str_starts_with((string)$response->getStatusCode(), '2');
+            return true;
         } catch (\Throwable $t) {
             return false;
         }
@@ -105,13 +112,7 @@ class HttpAdapterPsr extends HttpAdapter
     protected function readMetadata(string $path): FileAttributes
     {
         try {
-            $request = new \GuzzleHttp\Psr7\Request('HEAD', $path);
-            $response = $this->client->sendRequest($request);
-
-            if (!\str_starts_with((string)$response->getStatusCode(), '2')) {
-                throw new \League\Flysystem\UnableToRetrieveMetadata('File not found');
-            }
-
+            $response = $this->head($path);
             $headers = array_change_key_case($response->getHeaders());
 
             return new FileAttributes(
@@ -124,5 +125,23 @@ class HttpAdapterPsr extends HttpAdapter
         } catch (\Throwable $t) {
             throw new \League\Flysystem\UnableToRetrieveMetadata($t->getMessage(), $t->getCode(), $t);
         }
+    }
+
+    /**
+     * Make HEAD request.
+     *
+     * @param string $path
+     * @return \Psr\Http\Message\ResponseInterface
+     */
+    protected function head(string $path): \Psr\Http\Message\ResponseInterface
+    {
+        $request = new \GuzzleHttp\Psr7\Request('HEAD', $path);
+        $response = $this->client->sendRequest($request);
+
+        if (!\str_starts_with((string)$response->getStatusCode(), '2')) {
+            throw new \League\Flysystem\UnableToRetrieveMetadata('File not found');
+        }
+
+        return $response;
     }
 }

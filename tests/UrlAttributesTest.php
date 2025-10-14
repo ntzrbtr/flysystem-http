@@ -16,10 +16,15 @@ class UrlAttributesTest extends TestCase
     {
         $variants = [];
         foreach (self::fromHeadersDataProvider() as $name => $data) {
+            $headers = [];
+            foreach ($data['headers'] as $key => $value) {
+                $headers[$key] = [$value];
+            }
+
             $variants[$name] = [
                 'response' => new Response(
                     status: 200,
-                    headers: $data['headers'],
+                    headers: $headers,
                 ),
                 'path' => $data['path'],
                 'expectedHeaders' => $data['expectedHeaders'],

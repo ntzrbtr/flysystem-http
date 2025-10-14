@@ -106,7 +106,9 @@ abstract class HttpAdapter implements \League\Flysystem\FilesystemAdapter
      */
     public function listContents(string $path, bool $deep): iterable
     {
-        throw new FileOnlyFilesystem(FilesystemOperationFailed::OPERATION_LIST_CONTENTS);
+        if ($this->fileExists($path)) {
+            yield $this->readMetadata($path);
+        }
     }
 
     /**
@@ -133,50 +135,4 @@ abstract class HttpAdapter implements \League\Flysystem\FilesystemAdapter
      */
     abstract protected function readMetadata(string $path): FileAttributes;
 
-    /**
-     * Parse mime type.
-     *
-     * @param string|null $value
-     * @return string|null
-     */
-    protected function parseMimeType(?string $value): ?string
-    {
-        if (is_string($value)) {
-            [$value,] = explode(';', $value);
-        }
-
-        // @todo Parse mime type from file extension
-
-        return $value;
-    }
-
-    /**
-     * Parse last modified.
-     *
-     * @param mixed $value
-     * @return int|null
-     */
-    protected function parseLastModified(mixed $value): ?int
-    {
-        return match(true) {
-            is_string($value) => strtotime($value),
-            is_numeric($value) => (int)$value,
-            default => null,
-        };
-    }
-
-    /**
-     * Parse file size.
-     *
-     * @param string|null $value
-     * @return int|null
-     */
-    protected function parseFileSize(?string $value): ?int
-    {
-        if (is_numeric($value)) {
-            return (int)$value;
-        }
-
-        return $value;
-    }
 }

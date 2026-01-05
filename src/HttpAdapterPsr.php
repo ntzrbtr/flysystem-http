@@ -6,6 +6,7 @@ namespace Netzarbeiter\FlysystemHttp;
 
 use League\Flysystem\FileAttributes;
 use League\Flysystem\UnableToReadFile;
+use Psr\Http\Client\ClientExceptionInterface;
 use Psr\Http\Message\StreamInterface;
 
 /**
@@ -93,9 +94,7 @@ class HttpAdapterPsr extends HttpAdapter
             $request = new \GuzzleHttp\Psr7\Request('GET', $path);
             $response = $this->client->sendRequest($request);
 
-            if (!\str_starts_with((string)$response->getStatusCode(), '2')) {
-                throw new UnableToReadFile('File not found');
-            }
+            $this->handleResponseStatusCode($response->getStatusCode());
 
             return $response->getBody();
         } catch (\Throwable $t) {
@@ -113,15 +112,8 @@ class HttpAdapterPsr extends HttpAdapter
     {
         try {
             $response = $this->head($path);
-            $headers = array_change_key_case($response->getHeaders());
 
-            return new FileAttributes(
-                $path,
-                $this->parseFileSize($headers['content-length'][0] ?? null),
-                \League\Flysystem\Visibility::PUBLIC,
-                $this->parseLastModified($headers['last-modified'][0] ?? null),
-                $this->parseMimeType($headers['content-type'][0] ?? null)
-            );
+            return UrlAttributes::fromResponse($response, $path);
         } catch (\Throwable $t) {
             throw new \League\Flysystem\UnableToRetrieveMetadata($t->getMessage(), $t->getCode(), $t);
         }
@@ -131,17 +123,29 @@ class HttpAdapterPsr extends HttpAdapter
      * Make HEAD request.
      *
      * @param string $path
+     *
      * @return \Psr\Http\Message\ResponseInterface
+     *
+     * @throws ClientExceptionInterface
      */
     protected function head(string $path): \Psr\Http\Message\ResponseInterface
     {
         $request = new \GuzzleHttp\Psr7\Request('HEAD', $path);
         $response = $this->client->sendRequest($request);
 
-        if (!\str_starts_with((string)$response->getStatusCode(), '2')) {
-            throw new \League\Flysystem\UnableToRetrieveMetadata('File not found');
-        }
+        $this->handleResponseStatusCode($response->getStatusCode());
 
         return $response;
     }
+
+    private function handleResponseStatusCode(int $statusCode): void
+    {
+        if ($statusCode < 100 || $statusCode >= 400) {
+            throw new \League\Flysystem\UnableToRetrieveMetadata(
+                message: 'File not found',
+                code: $statusCode
+            );
+        }
+    }
+
 }

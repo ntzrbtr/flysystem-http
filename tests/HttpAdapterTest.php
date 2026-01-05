@@ -6,6 +6,7 @@ namespace Netzarbeiter\FlysystemHttp\Tests;
 
 use League\Flysystem\Config;
 use League\Flysystem\FileAttributes;
+use League\Flysystem\FilesystemException;
 use League\Flysystem\UnableToReadFile;
 use League\Flysystem\UnableToRetrieveMetadata;
 use League\Flysystem\Visibility;
@@ -268,11 +269,13 @@ abstract class HttpAdapterTest extends \PHPUnit\Framework\TestCase
 
     /**
      * Test FilesystemAdapter::listContents()
+     *
+     * @throws FilesystemException
      */
     public function testListContents(): void
     {
-        $this->expectException(FileOnlyFilesystem::class);
-        $this->adapter->listContents('/directory', true);
+        $items = $this->adapter->listContents('/directory', true);
+        self::assertIsIterable($items);
     }
 
     /**

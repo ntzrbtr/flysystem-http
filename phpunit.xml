@@ -10,6 +10,9 @@
             <file>tests/HttpAdapterPsrFromUrlTest.php</file>
             <file>tests/HttpAdapterPsrFromClientTest.php</file>
         </testsuite>
+        <testsuite name="Unit">
+            <file>tests/UrlAttributesTest.php</file>
+        </testsuite>
     </testsuites>
     <source>
         <include>

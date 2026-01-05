@@ -144,12 +144,6 @@ class HttpAdapterStream extends HttpAdapter
             throw new \League\Flysystem\UnableToRetrieveMetadata();
         }
 
-        return new FileAttributes(
-            $path,
-            $this->parseFileSize($headers['content-length'] ?? null),
-            \League\Flysystem\Visibility::PUBLIC,
-            $this->parseLastModified($headers['last-modified'] ?? null),
-            $this->parseMimeType($headers['content-type'] ?? null)
-        );
+        return UrlAttributes::fromHeaders($headers, $path);
     }
 }

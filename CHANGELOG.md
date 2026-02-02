@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.2.0]
+
+### Fixed
+
+- Fix encoding handling (thanks to MekDrop)
+- Reworked changelog to adhere to https://keepachangelog.com/en/1.0.0/
+
 ## [1.1.0]
 
 ### Fixed
